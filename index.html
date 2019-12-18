@@ -1,0 +1,144 @@
+﻿<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>流光线</title>
+
+    <style>
+        html,
+        body,
+        #map {
+            padding: 0;
+            margin: 0;
+            height: 100%;
+            width: 100%;
+        }
+
+        .mytitle {
+            z-index: 1000;
+            color: #fff;
+            font-size: 16px;
+            text-align: center;
+            position: absolute;
+            top: 10px;
+            left: 40%;
+            width: 20%;
+        }
+    </style>
+    <link rel="stylesheet" href="https://js.arcgis.com/4.12/esri/themes/light/main.css">
+    <script src='https://gallerybox.echartsjs.com/dep/echarts/latest/echarts.min.js'></script>
+    <script src="http://code.jquery.com/jquery-2.1.1.min.js"></script>
+    <script>
+        var dojoConfig = {
+            parseOnLoad: true,
+            packages: [{
+                name: "src",
+                location: location.pathname.replace(/\/[^/]+$/, "") + "/src"
+            }]
+        };
+    </script>
+    <script src="https://js.arcgis.com/4.12/"></script>
+    <script>
+        var map;
+
+        require([
+            "esri/Map",
+            "esri/Basemap",
+            "esri/layers/TileLayer",
+            "src/echartsLayer",
+            "esri/views/SceneView",
+            "esri/tasks/QueryTask",
+            "esri/tasks/support/Query",
+            "dojo/domReady!"
+        ], function (
+            Map, Basemap, TileLayer, echartsLayer, SceneView, QueryTask, Query
+        ) {
+            var layer = new TileLayer({
+                url: "http://map.geoq.cn/ArcGIS/rest/services/ChinaOnlineStreetPurplishBlue/MapServer"
+            });
+            var customBasemap = new Basemap({
+                baseLayers: [layer],
+                title: "Custom Basemap",
+                id: "myBasemap"
+            });
+            var map = new Map({
+                basemap: customBasemap
+            });
+            var view = new SceneView({
+                center: [110.62, 36.32], // long, lat
+                container: 'map',
+                map: map,
+                zoom: 4
+            });
+
+            var lineData = [];
+            const colorStrip = ['#EEEC0D', '#36FFF8', '#67D670', '#FC92F7', '#EEEC0D', '#FC92F7', '#E55125', '#5EA6FE', '#5EA6FE', '#67D670'];
+            view.when(function () {
+                $.get('./lineloop.json', (res) => {
+                    const { features } = res;
+                    features.map((fea) => {
+                        fea.geometry.coordinates.map((cs) => {
+                            let p = cs.map((c, i) => { if (i % 1 === 0) return c }).filter(Boolean);
+                            lineData.push({
+                                coords: p,
+                                "lineStyle": {
+                                    "normal": {
+                                        "color": colorStrip[Math.floor(Math.random() * 10)]
+                                    }
+                                }
+                            });
+
+
+                        });
+
+                    });
+
+                    var chart = new echartsLayer(view);
+                    var option = {
+                        series: [{
+                            type: 'lines',
+                            coordinateSystem: 'arcgis',
+                            polyline: true,
+                            data: lineData,
+                            silent: true,
+                            lineStyle: {
+                                normal: {
+                                    opacity: 0.4,
+                                    width: 2.5
+                                }
+                            },
+                            progressiveThreshold: 500,
+                            progressive: 200
+                        }, {
+                            type: 'lines',
+                            coordinateSystem: 'arcgis',
+                            polyline: true,
+                            data: lineData,
+                            lineStyle: {
+                                normal: {
+                                    width: 0
+                                }
+                            },
+                            effect: {
+                                constantSpeed: 50,
+                                show: true,
+                                trailLength: 0.6,
+                                symbolSize: 3
+                            },
+                            zlevel: 1
+                        }]
+                    };
+                    chart.setChartOption(option);
+                });
+            });
+        });
+    </script>
+</head>
+
+<body class="tundra">
+    <div id="map"></div>
+    <span class="mytitle"></span>
+</body>
+
+</html>
